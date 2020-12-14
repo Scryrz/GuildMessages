@@ -24,33 +24,10 @@ local defaults = {
 }
 
 GMSG_Tags = {
-  ["{GUILD}"] = nil,
+  ["{GUILDLINK}"] = nil,
+  ["{GUILD}"] = GetGuildInfo("player"),
+  ["{ME}"] = UnitName("player"),
 }
-
-
-
-
--- REGISTER LDB
-local GMSG_LDB = LibStub("LibDataBroker-1.1"):NewDataObject("GuildMessages", {
-  type = "launcher",
-  text = "Guild Messages",
-  icon = "Interface\\Addons\\GuildMessages\\icon",
-  OnClick = function(_, msg)
-    if msg == "LeftButton" then
-      GMSG:Print("Function not yet implemented!")
-    elseif msg == "RightButton" then
-      GMSG:InitMenu() --TODO: DO INITMENU()
-    end
-  end,
-  OnTooltipShow = function(tooltip)
-    if not tooltip or not tooltip.AddLine then return end
-    tooltip:AddLine("Guild Messages")
-    tooltip:AddLine("Right click to open the menu!")
-  end,
-})
-
--- REGISTER ICON
-local GMSG_Icon = LibStub("LibDBIcon-1.0")
 
 -------------------------------------
 -- VARIABLES AND CONSTANTS
@@ -128,13 +105,8 @@ function GMSG:OnInitialize()
   self:RegisterChatCommand("guildmessages", "SlashCommands")
   self:RegisterChatCommand("gmsg", "SlashCommands")
 
-  -- Open/Close guild frame in order to expose guild API information.
-  -- This is necessary for ClubFinderGUID functions to work.
-  ToggleGuildFrame()
-  GMSG:InitGuildInfo()
-  GMSG_Tags["{GUILD}"] = GMSG:GetGuildLink()
-  ToggleGuildFrame()
-
+  -- GMSG:InitGuildInfo()
+  -- GMSG:InitGuildInfo()
 end
 
 function GMSG:OnEnable()
@@ -159,7 +131,13 @@ function GMSG:GetDebug(info)
 end
 
 function GMSG:SlashCommands(input)
-  if not inpot or inpit:trim() == "" then
+  if not input or input:trim() == "" then
+    ToggleGuildFrame()
+    GMSG:InitGuildInfo()
     GMSG:DrawMain()
+    if self.db.profile.guildinfo then
+      GMSG_Tags["{GUILDLINK}"] = GMSG:GetGuildLink()
+    end
+    ToggleGuildFrame()
   end
 end

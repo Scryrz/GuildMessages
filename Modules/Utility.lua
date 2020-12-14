@@ -205,7 +205,6 @@ function GMSG:Decode(content)
       return false
     end
 
-    -- GMSG:Print(data.messageTitle)
     return data
   end
 end
@@ -233,11 +232,15 @@ end
 function GMSG:InitGuildInfo()
   local club_id = C_Club.GetGuildClubId()
   local club = ClubFinderGetCurrentClubListingInfo(club_id)
-
-  self.db.profile.guildinfo = club
+  if not club then
+    club = ClubFinderGetCurrentClubListingInfo(club_id)
+  else
+    self.db.profile.guildinfo = club
+  end
 end
 
 function GMSG:GetGuildLink()
+  if not self.db.profile.guildinfo then GMSG:InitGuildInfo() end
   local guild = self.db.profile.guildinfo
   local link = GetClubFinderLink(guild.clubFinderGUID, guild.name)
 
