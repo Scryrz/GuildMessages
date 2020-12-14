@@ -127,8 +127,8 @@ local function Frame_Messages(container)
   -- Message Selection Dropdown
   ddbx_msg:SetLabel("Message")
   ddbx_msg:SetList(GMSG:GetMessageTitles())
-  ddbx_msg:SetValue(1)
   ddbx_msg:SetWidth(150)
+  ddbx_msg:SetValue(1)
   ddbx_msg:SetCallback("OnValueChanged", function(c, e, v)
     data = GMSG:GetMessage(v)
     local chan = { }
@@ -141,6 +141,7 @@ local function Frame_Messages(container)
       ddbx_chan:SetList(chan, GMSG_Constants.messageOutputOrder.Guild)
     end
 
+    ddbx_chan:SetValue(1)
     ebx_msg:SetText(data.messageBody)
   end)
   container:AddChild(ddbx_msg)
@@ -174,12 +175,6 @@ local function Frame_Messages(container)
     elseif mtype == "Public" then
       SendChatMessage(processed[1], output, nil, channelID)
     end
-
-    -- if mtype == "Guild" then
-    --   GMSG:ThrottleMessage(processed, output, channelID)
-    -- else
-    --   SendChatMessage(processed[1], output, nil, channelID)
-    -- end
   end)
   container:AddChild(btn_send)
 
@@ -501,6 +496,7 @@ function GMSG:DrawMain()
   frame:SetTitle("Guild Messages")
   frame:SetStatusText("GuildMessages || v0.0.1 || For <Isometric> by Ayr")
   frame:SetCallback("OnClose", function(widget) UI:Release(widget) end)
+  frame:SetHeight(400)
   frame:SetLayout("Fill")
 
   -- TREE GROUP

@@ -124,16 +124,16 @@ function GMSG:OnInitialize()
   options.args.profiles = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
   self.db.profile.activemessage = nil
 
+  -- Register Chat Commands
+  self:RegisterChatCommand("guildmessages", "SlashCommands")
+  self:RegisterChatCommand("gmsg", "SlashCommands")
+
   -- Open/Close guild frame in order to expose guild API information.
   -- This is necessary for ClubFinderGUID functions to work.
   ToggleGuildFrame()
-  ToggleGuildFrame()
-
   GMSG:InitGuildInfo()
   GMSG_Tags["{GUILD}"] = GMSG:GetGuildLink()
-
-  -- TEMP: DRAW FRAME
-  GMSG:DrawMain()
+  ToggleGuildFrame()
 
 end
 
@@ -156,4 +156,10 @@ end
 
 function GMSG:GetDebug(info)
   return self.db.profile.options.debug
+end
+
+function GMSG:SlashCommands(input)
+  if not inpot or inpit:trim() == "" then
+    GMSG:DrawMain()
+  end
 end
