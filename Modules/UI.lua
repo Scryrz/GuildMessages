@@ -9,6 +9,7 @@ local N = ...
 local GMSG = LibStub("AceAddon-3.0"):GetAddon(N)
 local UI = LibStub("AceGUI-3.0")
 
+
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 -- VARIABLES & CONSTANTS
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
@@ -32,6 +33,14 @@ local treeStruct = {
       },
       {
         value = "E",
+        text = "Delete",
+      },
+      {
+        value = "F",
+        text = "Import",
+      },
+      {
+        value = "G",
         text = "Export",
       }
     }
@@ -40,67 +49,47 @@ local treeStruct = {
 
 local GMSG_Constants = {
   ["messageOutput"] = {
-    [1] = "TEST", -- Prints expected output.
-    [2] = "SAY", -- /say
-    [3] = "EMOTE", -- /emote
-    [4] = "YELL", -- /yell
-    [5] = "PARTY", -- /party
-    [6] = "RAID", -- /raid
-    [7] = "RAID_WARNING", -- /rw
-    [8] = "INSTANCE_CHAT", -- /i
-    [9] = "GUILD", -- /g
-    [10] = "OFFICER", -- /o
-    [11] = "WHISPER", -- /w <target>
-    [12] = "GENERAL", -- /1
-    [13] = "TRADE", -- /2
-    [14] = "LOCALDEFENSE", -- /3
-    [15] = "LFG", -- /4
+    ["Public"] = {
+      ["TEST"] = "TEST",
+      ["GENERAL"] = "GENERAL", -- /1
+      ["TRADE"] = "TRADE", -- /2
+      ["LFG"] = "LFG", -- /4
+    },
+    ["Guild"] = {
+      ["TEST"] = "TEST", -- Prints expected output.
+      ["GUILD"] = "GUILD", -- /g
+      ["OFFICER"] = "OFFICER", -- /o
+    },
+  },
+  ["messageOutputOrder"] = {
+    ["Public"] = {
+      "TEST",
+      "GENERAL",
+      "TRADE",
+      "LFG",
+    },
+    ["Guild"] = {
+      "TEST",
+      "GUILD",
+      "OFFICER",
+    },
   },
   ["defaultFormData"] = {
     ["messageTitle"] = "",
     ["messageBody"] = "",
-    ["enabledChannels"] = {
-      ["TEST"] = false,
-      ["SAY"] = false,
-      ["EMOTE"] = false,
-      ["YELL"] = false,
-      ["PARTY"] = false,
-      ["RAID"] = false,
-      ["RAID_WARNING"] = false,
-      ["INSTANCE_CHAT"] = false,
-      ["GUILD"] = false,
-      ["OFFICER"] = false,
-      ["WHISPER"] = false,
-      ["GENERAL"] = false,
-      ["TRADE"] = false,
-      ["LOCALDEFENSE"] = false,
-      ["LFG"] = false,
-    },
+    ["messageType"] = "",
   }
 }
 
-local cbx_list = { } -- List of Checkboxes Created
 local form_data = GMSG_Constants.defaultFormData
 local data
+local exportData
 local selectedchannel
+local previousTitle
 
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 -- UI DESIGN
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
-
-local function TestPrintVals(c, e, v)
-  for key, val in pairs(c.userdata) do
-    GMSG:Debug(c:GetUserData("Output"))
-    GMSG:Debug(tostring(c:GetValue()))
-  end
-end
-
-local function UpdateOutput(v)
-  local chan = v:GetUserData("Output")
-  local value = v:GetValue()
-
-  form_data.enabledChannels[chan] = value
-end
 
 local function PrintFormData()
   GMSG:Debug("Title: " .. form_data.messageTitle)
@@ -110,7 +99,6 @@ local function PrintFormData()
     GMSG:Debug("Chan: " .. k .. " | E: " .. tostring(v))
   end
 end
-
 
 -- -- -- -- -- -- -- -- -- --
 -- MODULES
@@ -144,13 +132,15 @@ local function Frame_Messages(container)
   ddbx_msg:SetCallback("OnValueChanged", function(c, e, v)
     data = GMSG:GetMessage(v)
     local chan = { }
-    for k, v in pairs(data.enabledChannels) do
-      if v == true then
-        chan[k] = k
-      end
+
+    if data.messageType == "Public" then
+      chan = GMSG_Constants.messageOutput.Public
+      ddbx_chan:SetList(chan, GMSG_Constants.messageOutputOrder.Public)
+    else
+      chan = GMSG_Constants.messageOutput.Guild
+      ddbx_chan:SetList(chan, GMSG_Constants.messageOutputOrder.Guild)
     end
-    ddbx_chan:SetList(chan)
-    ddbx_chan:SetValue(1)
+
     ebx_msg:SetText(data.messageBody)
   end)
   container:AddChild(ddbx_msg)
@@ -174,7 +164,23 @@ local function Frame_Messages(container)
   btn_send:SetText("Send")
   btn_send:SetWidth(100)
   btn_send:SetPoint("RIGHT", 0, 0)
-  btn_send:SetCallback("OnClick", function(c, e, v) GMSG:SendMessage(selectedchannel) end)
+  btn_send:SetCallback("OnClick", function(c, e, v)
+    local processed, output, channelID, mtype = GMSG:ProcessMessage(selectedchannel)
+
+    if output == "TEST" then
+      GMSG:ThrottleMessage(processed, output, channelID)
+    elseif mtype == "Guild" then
+      GMSG:ThrottleMessage(processed, output, channelID)
+    elseif mtype == "Public" then
+      SendChatMessage(processed[1], output, nil, channelID)
+    end
+
+    -- if mtype == "Guild" then
+    --   GMSG:ThrottleMessage(processed, output, channelID)
+    -- else
+    --   SendChatMessage(processed[1], output, nil, channelID)
+    -- end
+  end)
   container:AddChild(btn_send)
 
 end
@@ -202,8 +208,15 @@ local function Frame_ManageMessages_Create(container)
   ebx_msg_title:SetCallback("OnEnterPressed", function(c, e, v) form_data.messageTitle = v end)
   container:AddChild(ebx_msg_title)
 
+  -- DDBX: Message Type
+  local ddbx_type = UI:Create("Dropdown")
+  ddbx_type:SetList({["Guild"] = "Guild", ["Public"] = "Public"})
+  ddbx_type:SetLabel("Output")
+  ddbx_type:SetCallback("OnValueChanged", function(c, e, v) form_data.messageType = v end)
+  container:AddChild(ddbx_type)
+
   -- EditBox: Message Body
-  local ebx_msg_body = UI:Create("EditBox")
+  local ebx_msg_body = UI:Create("MultiLineEditBox")
   ebx_msg_body:SetLabel("Message Body")
   ebx_msg_body:SetMaxLetters(255)
   ebx_msg_body:SetFullWidth(true)
@@ -212,25 +225,236 @@ local function Frame_ManageMessages_Create(container)
   ebx_msg_body:SetCallback("OnEnterPressed", function(c, e, v) form_data.messageBody = v end)
   container:AddChild(ebx_msg_body)
 
-  -- MultiSelect: Message Type
-  for k, v in ipairs(GMSG_Constants.messageOutput) do
-    local cbx = UI:Create("CheckBox")
-    cbx:SetValue(false)
-    cbx:SetType("checkbox")
-    cbx:SetLabel(v)
-    cbx:SetUserData("Output", v)
-    cbx:SetCallback("OnValueChanged", UpdateOutput)
-    container:AddChild(cbx)
-
-    cbx_list[k] = {v, cbx}
-  end
-
   -- Button: Save
   local btn_save = UI:Create("Button")
   btn_save:SetText("Save")
   btn_save:SetWidth(100)
   btn_save:SetCallback("OnClick", function(c, e, v) GMSG:CreateMsg(form_data) end)
   container:AddChild(btn_save)
+end
+
+-- Function: Frame_ManageMessages_Edit()
+-- Purpose:  Draw the 'Edit Message' frame.
+local function Frame_ManageMessages_Edit(container)
+  local head = UI:Create("Heading")
+  local desc = UI:Create("Label")
+  local head2 = UI:Create("Heading")
+  local desc2 = UI:Create("Label")
+  local head3 = UI:Create("Heading")
+  local ddbx_msg = UI:Create("Dropdown")
+  local ebx_msg_title = UI:Create("EditBox")
+  local ddbx_type = UI:Create("Dropdown")
+  local ebx_msg_body = UI:Create("MultiLineEditBox")
+  local btn_edit = UI:Create("Button")
+
+  -- Header
+  head:SetText("Edit Message")
+  head:SetRelativeWidth(1)
+  container:AddChild(head)
+
+  -- Description
+  desc:SetText("Edit a new message by filling in the provided form and clicking save.")
+  desc:SetFullWidth(true)
+  container:AddChild(desc)
+
+  -- Header 2: Select Message
+  head2:SetText("Select Message")
+  head2:SetRelativeWidth(1)
+  container:AddChild(head2)
+
+  -- Description 2: Select Message
+  desc2:SetText("Select a message to edit.")
+  desc2:SetFullWidth(true)
+  container:AddChild(desc2)
+
+  -- DDBX: Message
+  ddbx_msg:SetLabel("Message")
+  ddbx_msg:SetList(GMSG:GetMessageTitles())
+  ddbx_msg:SetValue(1)
+  ddbx_msg:SetWidth(150)
+  ddbx_msg:SetCallback("OnValueChanged", function(c, e, v)
+    data = GMSG:GetMessage(v)
+    ebx_msg_title:SetText(data.messageTitle)
+    ebx_msg_body:SetText(data.messageBody)
+    ddbx_type:SetValue(data.messageType)
+
+    previousTitle = data.messageTitle
+
+    form_data.messageTitle = data.messageTitle
+    form_data.messageBody = data.messageBody
+    form_data.messageType = data.messageType
+
+  end)
+  container:AddChild(ddbx_msg)
+
+  -- Header 3: Edit Content
+  head3:SetText("Edit Content")
+  head3:SetRelativeWidth(1)
+  container:AddChild(head3)
+
+  -- EditBox: Message Title
+
+  ebx_msg_title:SetLabel("Message Title")
+  ebx_msg_title:SetMaxLetters(0)
+  ebx_msg_title:SetWidth(200)
+  ebx_msg_title:SetCallback("OnEnterPressed", function(c, e, v) form_data.messageTitle = v end)
+  container:AddChild(ebx_msg_title)
+
+  -- DDBX: Message Type
+
+  ddbx_type:SetList({["Guild"] = "Guild", ["Public"] = "Public"})
+  ddbx_type:SetLabel("Output")
+  ddbx_type:SetCallback("OnValueChanged", function(c, e, v) form_data.messageType = v end)
+  container:AddChild(ddbx_type)
+
+  -- EditBox: Message Body
+
+  ebx_msg_body:SetLabel("Message Body")
+  ebx_msg_body:SetMaxLetters(255)
+  ebx_msg_body:SetFullWidth(true)
+  ebx_msg_body:SetHeight(50)
+  ebx_msg_body:DisableButton(false)
+  ebx_msg_body:SetCallback("OnEnterPressed", function(c, e, v) form_data.messageBody = v end)
+  container:AddChild(ebx_msg_body)
+
+  -- Button: Edit
+  btn_edit:SetText("Edit")
+  btn_edit:SetWidth(100)
+  btn_edit:SetCallback("OnClick", function(c, e, v)
+    GMSG:Edit(previousTitle, form_data)
+    ddbx_msg:SetList(GMSG:GetMessageTitles())
+    ddbx_msg:SetValue(1)
+    ebx_msg_title:SetText("")
+    ebx_msg_body:SetText("")
+    ddbx_type:SetValue(nil)
+  end)
+  container:AddChild(btn_edit)
+end
+
+-- Function: Frame_ManageMessages_Delete()
+-- Purpose: Draw the 'Delete Message' frame.
+local function Frame_ManageMessages_Delete(container)
+  local head = UI:Create("Heading")
+  local desc = UI:Create("Label")
+  local ddbx_msg = UI:Create("Dropdown")
+  local ebx_msg = UI:Create("MultiLineEditBox")
+  local btn_del = UI:Create("Button")
+
+  -- Header
+  head:SetText("Delete Message")
+  head:SetRelativeWidth(1)
+  container:AddChild(head)
+
+  -- Description
+  desc:SetText("Delete a message by selecting it and clicking delete.")
+  desc:SetFullWidth(true)
+  container:AddChild(desc)
+
+  -- DDBX: Messages
+  ddbx_msg:SetLabel("Message")
+  ddbx_msg:SetList(GMSG:GetMessageTitles())
+  ddbx_msg:SetValue(1)
+  ddbx_msg:SetWidth(150)
+  ddbx_msg:SetCallback("OnValueChanged", function(c, e, v)
+    data = nil
+    data = GMSG:GetMessage(v)
+    ebx_msg:SetText(data.messageBody)
+  end)
+  container:AddChild(ddbx_msg)
+
+  -- EBX: Message
+  ebx_msg:SetLabel("Message")
+  ebx_msg:SetFullWidth(true)
+  ebx_msg:SetNumLines(4)
+  ebx_msg:SetDisabled(true)
+  ebx_msg:SetMaxLetters(255)
+  ebx_msg:DisableButton(true)
+  container:AddChild(ebx_msg)
+
+  -- BTN: Delete
+  btn_del:SetText("Delete")
+  btn_del:SetWidth(100)
+  btn_del:SetPoint("RIGHT", 0, 0)
+  btn_del:SetCallback("OnClick", function(c, e, v)
+    GMSG:Delete(data.messageTitle)
+    ddbx_msg:SetList(GMSG:GetMessageTitles())
+    ddbx_msg:SetValue(1)
+    ddbx_msg:SetText("")
+  end)
+  container:AddChild(btn_del)
+end
+
+local function Frame_ManageMessages_Import(container)
+
+  local head = UI:Create("Heading")
+  local desc = UI:Create("Label")
+  local ebx_msg = UI:Create("MultiLineEditBox")
+  local btn_imp = UI:Create("Button")
+
+  -- Header
+  head:SetText("Import Message")
+  head:SetRelativeWidth(1)
+  container:AddChild(head)
+
+  -- Description
+  desc:SetText("Import a given message by pasting the code and clicking the button.")
+  desc:SetFullWidth(true)
+  container:AddChild(desc)
+
+  -- EBX: Message Text
+  ebx_msg:SetLabel("Message Code")
+  ebx_msg:SetFullWidth(true)
+  container:AddChild(ebx_msg)
+
+  -- BTN: Import
+  btn_imp:SetText("Import")
+  btn_imp:SetWidth(150)
+  btn_imp:SetCallback("OnClick", function(c, e, v)
+    local code = ebx_msg:GetText()
+    local data = GMSG:Decode(code)
+    GMSG:Import(data)
+  end)
+  container:AddChild(btn_imp)
+
+end
+
+
+local function Frame_ManageMessages_Export(container)
+
+  local head = UI:Create("Heading")
+  local desc = UI:Create("Label")
+  local ddbx_msg = UI:Create("Dropdown")
+  local ebx_msg = UI:Create("MultiLineEditBox")
+
+  -- Header
+  head:SetText("Export Message")
+  head:SetRelativeWidth(1)
+  container:AddChild(head)
+
+  -- Description
+  desc:SetText("Export a given message by selecting it and clicking the button.")
+  desc:SetFullWidth(true)
+  container:AddChild(desc)
+
+  -- DDBX: Message
+  ddbx_msg:SetLabel("Message")
+  ddbx_msg:SetList(GMSG:GetMessageTitles())
+  ddbx_msg:SetValue(1)
+  ddbx_msg:SetWidth(150)
+  ddbx_msg:SetCallback("OnValueChanged", function(c, e, v)
+    exportData = GMSG:GetMessage(v)
+    ebx_msg:SetText(" ")
+    local msg_serial = GMSG:Encode(exportData)
+    ebx_msg:SetText(msg_serial)
+  end)
+  container:AddChild(ddbx_msg)
+
+  -- EBX: Message Text
+  ebx_msg:SetLabel("Exported Message")
+  ebx_msg:SetFullWidth(true)
+  ebx_msg:DisableButton(true)
+  container:AddChild(ebx_msg)
+
 end
 
 -- -- -- -- -- -- -- -- -- --
@@ -244,17 +468,25 @@ local function DrawFrame(container, event, group)
   -- Reset Local Data
   cbx_list = { }
   form_data = GMSG_Constants.defaultFormData
+  data = nil
+  exportData = nil
+  selectedchannel = nil
+  previousTitle = nil
 
   GMSG:Debug("DrawFrame() fired: " .. group)
   if group == "A" then
     Frame_Messages(container)
   elseif group == "B" then
     Frame_ManageMessages(container)
-  elseif group ~= "C" then
+  elseif string.find(group, "C") then
     Frame_ManageMessages_Create(container)
-  elseif group ~= "D" then
+  elseif string.find(group, "D") then
     Frame_ManageMessages_Edit(container)
-  elseif group ~= "E" then
+  elseif string.find(group, "E") then
+    Frame_ManageMessages_Delete(container)
+  elseif string.find(group, "F") then
+    Frame_ManageMessages_Import(container)
+  elseif string.find(group, "G") then
     Frame_ManageMessages_Export(container)
   end
 end
