@@ -9,6 +9,7 @@ local GMSG = LibStub("AceAddon-3.0"):GetAddon(N)
 -- Function: Debug(text)
 -- Purpose:  Prints a debug message to chat for dev purposes. Only active if
 --           self.db.profiles.options.debug == true
+-- Param:    text - text to be shown in the debug message.
 function GMSG:Debug(text)
   if self.db.profile.options.debug then
     GMSG:Print(" |cffC6AC54[DEBUG]|r " .. text)
@@ -17,27 +18,34 @@ end
 
 -- Function: CreateMsg()
 -- Purpose:  Saves a new message to self.db.messages
+-- Param:    table - table of message data.
 function GMSG:CreateMsg(table)
   local title = table.messageTitle
   local body = table.messageBody
   local mtype = table.messageType
 
-  self.db.profile.messages[title] = {
-    messageTitle = title,
-    messageBody = body,
-    messageType = mtype
-  }
+  -- Check if a message with that title already exists.
+  local isUnique = GMSG:IsUnique(title)
 
-  GMSG:Debug("Message created!")
-  GMSG:Debug("Title: " .. title)
-  GMSG:Debug("Body: " .. body)
-  GMSG:Debug("Type: " .. mtype)
+  -- Message is unique, write to memory.
+  if isUnique then
+    self.db.profile.messages[title] = {
+      messageTitle = title,
+      messageBody = body,
+      messageType = mtype
+    }
 
-  GMSG:Print("Message created: " .. title)
+    GMSG:Print("Message created: " .. title)
+  -- Duplicate message found. Do not write to memory and break.
+  else
+    GMSG:Print("ERROR: Duplicate message found! Either edit that message, or delete it.")
+    return
+  end
 end
 
 -- Function: GetMessageTitles()
 -- Purpose:  Returns a list of message titles.
+-- Return:   message_titles - table of message titles.
 function GMSG:GetMessageTitles()
   local message_titles = { }
   for k, _ in pairs(self.db.profile.messages) do
@@ -65,8 +73,23 @@ function GMSG:GetMessage(title)
   return self.db.profile.activemessage
 end
 
+-- Function: CheckDupes()
+-- Desc:     Checks if a duplicate message exists on creation.
+-- Param:    title - given message title to find
+-- Return:   true  - message is a duplicate
+--           false - message is unique
+function GMSG:IsUnique(title)
+  for k, _ in pairs(self.db.profile.messages) do
+    if k == title then
+      return false
+    else
+      return true
+    end
+  end
+end
+
 -- Function: ProcessMessage()
--- Param: channel - intended output of the message
+-- Param:    channel - intended output of the message
 function GMSG:ProcessMessage(channel)
   if not channel then return end
 
@@ -76,11 +99,14 @@ function GMSG:ProcessMessage(channel)
   local processed = GMSG:SplitString(tagged) -- Table of message lines.
   local output, channelID = GMSG:ProcessChannel(channel)
 
-
-  -- SendChatMessage(line, sendChan, nil, channelID)
   return processed, output, channelID, message.messageType
 end
 
+-- Function: ProcessChannel()
+-- Desc:     Finds desired output channel, returns associated data.
+-- Param:    channel   - string representation of an in-game chat channel.
+-- Return:   output    - string representation of channel type
+--           channelID - string representation of full channel name (ID)
 function GMSG:ProcessChannel(channel)
   local output, channelID
   if channel == "TEST" then
@@ -118,8 +144,8 @@ end
 -- Function: ThrottleMessage()
 -- Desc:     Sends a line of the message every 0.5s.
 -- Param:    table     - table of lines of message to be sent
--- Param:    output    - intended output of the message
--- Param:    channelID - ID of the output channel (for public channels)
+--           output    - intended output of the message
+--           channelID - ID of the output channel (for public channels)
 function GMSG:ThrottleMessage(table, output, channelID)
   local index = 1
 
@@ -137,6 +163,7 @@ end
 -- Function: SplitString()
 -- Desc:     Splits messages into a table of lines on \n.
 -- Param:    table - message to be split
+-- Return:   lines - table of individual message lines
 function GMSG:SplitString(table)
   local input = table
   local lines = { strsplit("\n", input) }
@@ -146,6 +173,7 @@ end
 -- Function: ParseTags()
 -- Desc:     Parses string pre-split for any tags.
 -- Param:    str - string to be parsed
+-- Return:   input - parsed string with included tag replacements
 function GMSG:ParseTags(str)
   if not str then return end
   local input = str
@@ -165,6 +193,7 @@ end
 
 -- Function: Encode()
 -- Desc:     Serializes messages for export.
+-- Return:   dataEncoded - string of encoded input data.
 function GMSG:Encode(content)
   local SER = LibStub("AceSerializer-3.0")
   local DEF = LibStub("LibDeflate")
@@ -183,6 +212,9 @@ end
 
 -- Function: Decode()
 -- Desc:     Deserializes messages for import.
+-- Param:    content - string of encoded data.
+-- Return:   data    - table representation of decoded message object.
+--           false   - an error occured somewhere in the decoding process.
 function GMSG:Decode(content)
   local SER = LibStub("AceSerializer-3.0")
   local DEF = LibStub("LibDeflate")
@@ -231,6 +263,8 @@ function GMSG:Delete(msg)
   end
 end
 
+-- Function: InitGuildInfo()
+-- Desc:     Grabs guild recruitment information for use with tags.
 function GMSG:InitGuildInfo()
   local club_id = C_Club.GetGuildClubId()
   local club = ClubFinderGetCurrentClubListingInfo(club_id)
@@ -241,6 +275,9 @@ function GMSG:InitGuildInfo()
   end
 end
 
+-- Function: GetGuildLink()
+-- Desc:     Grabs the guild recruitment link from info stored in self.db.profile.guildinfo.
+-- Return:   link - text-based link object representing guild recruitment link
 function GMSG:GetGuildLink()
   if not self.db.profile.guildinfo then GMSG:InitGuildInfo() end
   local guild = self.db.profile.guildinfo
@@ -252,7 +289,7 @@ end
 -- Function: Edit()
 -- Desc:     Edits a message.
 -- Param:    previousTitle - title (index) of the message pre-edit.
--- Param:    data          - message data
+--           data          - message data
 function GMSG:Edit(previousTitle, data)
   local message = data
   local title = data.messageTitle
