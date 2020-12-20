@@ -2,7 +2,7 @@
 ## Title: Guild Messages
 ## Notes: Circumvents the need for macros, and allows you to store nifty guild ads and other repeatable messages.
 ## Author: Ayr
-## Version: 0.0.1
+## Version: 1.0.1
 # Uses semantic versioning - Major.Minor.Revision/Build (ex: 1.0.22)
 ## X-Date: 12/06/2020
 ## SavedVariables: GuildMessagesDB
