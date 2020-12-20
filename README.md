@@ -6,10 +6,6 @@
 
 GuildMessages is an easy-to-use framework that facilitates the creation, management, and sharing of messages that serve as advertisements both *for* and *to* your guild. This addon was created to be a functional replacement for the use of traditional in-game macros as a method of guild advertisement.
 
-**Table of Contents**
-
-[TOC]
-
 ## Features
 ## Quick Start               
 ## Documentation
