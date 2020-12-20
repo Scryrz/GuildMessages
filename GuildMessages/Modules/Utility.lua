@@ -32,6 +32,8 @@ function GMSG:CreateMsg(table)
   GMSG:Debug("Title: " .. title)
   GMSG:Debug("Body: " .. body)
   GMSG:Debug("Type: " .. mtype)
+
+  GMSG:Print("Message created: " .. title)
 end
 
 -- Function: GetMessageTitles()

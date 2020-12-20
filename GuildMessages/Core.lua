@@ -32,6 +32,7 @@ GMSG_Tags = {
 -------------------------------------
 -- VARIABLES AND CONSTANTS
 -------------------------------------
+-- TODO: Consider globalizing?
 local GMSG_Constants = {
   ["messageOutput"] = {
     [1] = "TEST", -- Prints expected output.
@@ -104,9 +105,6 @@ function GMSG:OnInitialize()
   -- Register Chat Commands
   self:RegisterChatCommand("guildmessages", "SlashCommands")
   self:RegisterChatCommand("gmsg", "SlashCommands")
-
-  -- GMSG:InitGuildInfo()
-  -- GMSG:InitGuildInfo()
 end
 
 function GMSG:OnEnable()

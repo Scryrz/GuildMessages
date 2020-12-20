@@ -47,6 +47,7 @@ local treeStruct = {
   },
 }
 
+-- TODO: Consider globalizing this?
 local GMSG_Constants = {
   ["messageOutput"] = {
     ["Public"] = {
@@ -183,20 +184,25 @@ end
 -- Function: Frame_ManageMessages_Create()
 -- Purpose:  Draw the 'Create Message' frame.
 local function Frame_ManageMessages_Create(container)
-  -- Header
+  -- UI Elements
   local head = UI:Create("Heading")
+  local desc = UI:Create("Label")
+  local ebx_msg_title = UI:Create("EditBox")
+  local ddbx_type = UI:Create("Dropdown")
+  local ebx_msg_body = UI:Create("MultiLineEditBox")
+  local btn_save = UI:Create("Button")
+
+  -- Header
   head:SetText("Create New Message")
   head:SetRelativeWidth(1)
   container:AddChild(head)
 
   -- Description
-  local desc = UI:Create("Label")
   desc:SetText("Create a new message by filling in the provided form and clicking save.")
   desc:SetFullWidth(true)
   container:AddChild(desc)
 
   -- EditBox: Message Title
-  local ebx_msg_title = UI:Create("EditBox")
   ebx_msg_title:SetLabel("Message Title")
   ebx_msg_title:SetMaxLetters(0)
   ebx_msg_title:SetWidth(200)
@@ -204,14 +210,12 @@ local function Frame_ManageMessages_Create(container)
   container:AddChild(ebx_msg_title)
 
   -- DDBX: Message Type
-  local ddbx_type = UI:Create("Dropdown")
   ddbx_type:SetList({["Guild"] = "Guild", ["Public"] = "Public"})
   ddbx_type:SetLabel("Output")
   ddbx_type:SetCallback("OnValueChanged", function(c, e, v) form_data.messageType = v end)
   container:AddChild(ddbx_type)
 
   -- EditBox: Message Body
-  local ebx_msg_body = UI:Create("MultiLineEditBox")
   ebx_msg_body:SetLabel("Message Body")
   ebx_msg_body:SetMaxLetters(255)
   ebx_msg_body:SetFullWidth(true)
@@ -221,10 +225,15 @@ local function Frame_ManageMessages_Create(container)
   container:AddChild(ebx_msg_body)
 
   -- Button: Save
-  local btn_save = UI:Create("Button")
   btn_save:SetText("Save")
   btn_save:SetWidth(100)
-  btn_save:SetCallback("OnClick", function(c, e, v) GMSG:CreateMsg(form_data) end)
+  btn_save:SetCallback("OnClick", function(c, e, v)
+    GMSG:CreateMsg(form_data)
+
+    -- Clear Form
+    ebx_msg_title:SetText("")
+    ebx_msg_body:SetText("")
+  end)
   container:AddChild(btn_save)
 end
 
@@ -317,6 +326,8 @@ local function Frame_ManageMessages_Edit(container)
   btn_edit:SetWidth(100)
   btn_edit:SetCallback("OnClick", function(c, e, v)
     GMSG:Edit(previousTitle, form_data)
+
+    -- Reset Form
     ddbx_msg:SetList(GMSG:GetMessageTitles())
     ddbx_msg:SetValue(1)
     ebx_msg_title:SetText("")
@@ -408,6 +419,9 @@ local function Frame_ManageMessages_Import(container)
     local code = ebx_msg:GetText()
     local data = GMSG:Decode(code)
     GMSG:Import(data)
+
+    -- Reset Form
+    ebx_msg:SetText("")
   end)
   container:AddChild(btn_imp)
 
