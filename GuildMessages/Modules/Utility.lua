@@ -28,7 +28,7 @@ function GMSG:CreateMsg(table)
   local isUnique = GMSG:IsUnique(title)
 
   -- Message is unique, write to memory.
-  if isUnique then
+  if isUnique == true then
     self.db.profile.messages[title] = {
       messageTitle = title,
       messageBody = body,
@@ -37,7 +37,7 @@ function GMSG:CreateMsg(table)
 
     GMSG:Print("Message created: " .. title)
   -- Duplicate message found. Do not write to memory and break.
-  else
+  elseif isUnique == false then
     GMSG:Print("ERROR: Duplicate message found! Either edit that message, or delete it.")
     return
   end
@@ -76,16 +76,25 @@ end
 -- Function: CheckDupes()
 -- Desc:     Checks if a duplicate message exists on creation.
 -- Param:    title - given message title to find
--- Return:   true  - message is a duplicate
---           false - message is unique
+-- Return:   true  - message is unique
+--           false - message is a duplicate
 function GMSG:IsUnique(title)
+  local isUnique = true
+
+  GMSG:Debug("(IsUnique) Called...")
+
+  -- TODO: Explicit true is janky logic. Rework at some point?
   for k, _ in pairs(self.db.profile.messages) do
     if k == title then
-      return false
-    else
-      return true
+      GMSG:Debug("(IsUnique) Title: " .. title)
+      GMSG:Debug("(IsUnique) K: " .. k)
+      isUnique = false
+      break
     end
   end
+
+  GMSG:Debug("(IsUnique) Status: " .. tostring(isUnique))
+  return isUnique
 end
 
 -- Function: ProcessMessage()
