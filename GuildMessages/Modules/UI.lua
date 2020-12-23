@@ -9,6 +9,8 @@ local N = ...
 local GMSG = LibStub("AceAddon-3.0"):GetAddon(N)
 local UI = LibStub("AceGUI-3.0")
 
+local ver = GetAddOnMetadata(N, "version")
+
 
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 -- VARIABLES & CONSTANTS
@@ -508,7 +510,7 @@ end
 function GMSG:DrawMain()
   local frame = UI:Create("Frame")
   frame:SetTitle("Guild Messages")
-  frame:SetStatusText("GuildMessages || v0.0.1 || For <Isometric> by Ayr")
+  frame:SetStatusText("GuildMessages || v" .. ver .. " || For <Isometric> by Ayr")
   frame:SetCallback("OnClose", function(widget) UI:Release(widget) end)
   frame:SetHeight(400)
   frame:SetLayout("Fill")
